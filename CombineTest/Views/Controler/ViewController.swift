@@ -30,9 +30,9 @@ override func viewDidLoad() {
     
     // 監聽資料有變動就改變
     
-    viewModel.$todos
+    viewModel.$price
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] datas in
+        .sink { [weak self] _ in
             //sink返回值會有強循環 用weak解掉
             self?.tableView.reloadData()
         }
@@ -48,9 +48,16 @@ override func viewDidLoad() {
             }
         }
         .store(in: &viewModel.cancellables)
-    
-    viewModel.fetchDatas()
+    self.viewModel.fetchDatas()
+    loopCommand()
 }
+    
+    func loopCommand(){
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+            self.viewModel.fetchDatas()
+            self.loopCommand()
+        }
+    }
     
     func subjectData(){
         cancellable = dataSubject
@@ -67,16 +74,27 @@ override func viewDidLoad() {
 
 extension ViewController: UITableViewDataSource ,UITableViewDelegate{
 func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    return viewModel.todos.count
+    return Todo.Currency.allCases.count
 }
 
 func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
     let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
 //    cell.textLabel?.text = "name:\(viewModel.todos[indexPath.row].name)" + "Gender:\(viewModel.todos[indexPath.row].gender)"
+    let currency = Todo.Currency.allCases[indexPath.row]
     
-    cell.textLabel?.text = "name:\(viewModel.todos[indexPath.row].title)" + "Gender:\(viewModel.todos[indexPath.row].userId)"
-     
-    return cell
+    var price: Double = 0.0
+            
+            switch currency {
+            case .usd:
+                price = viewModel.price?.USD ?? 0
+            case .jpy:
+                price = viewModel.price?.JPY ?? 0
+            case .eur:
+                price = viewModel.price?.EUR ?? 0
+            }
+            
+            cell.textLabel?.text = "\(currency.rawValue): \(price)"
+            return cell
 }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {

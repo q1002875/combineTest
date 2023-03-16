@@ -9,16 +9,17 @@
 import Foundation
 import Combine
 class DataListViewModel<T: Decodable> {
-    private let url = URL(string: "https://jsonplaceholder.typicode.com/todos")!
+    private let url = URL(string: "https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD,JPY,EUR")!
     var cancellables = Set<AnyCancellable>()
 
     @Published var todos: [T] = []
     @Published var error: Error? = nil
+    @Published var price: T? = nil
 
     func fetchDatas() {
         URLSession.shared.dataTaskPublisher(for: url)
             .map(\.data)
-            .decode(type: [T].self, decoder: JSONDecoder())
+            .decode(type: T.self, decoder: JSONDecoder())
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { completion in
                 switch completion {
@@ -28,7 +29,7 @@ class DataListViewModel<T: Decodable> {
                     self.error = error
                 }
             }, receiveValue: { todos in
-                self.todos = todos
+                self.price = todos
             })
             .store(in: &cancellables)
     }
