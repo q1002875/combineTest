@@ -12,6 +12,9 @@ import Foundation
 let dataSubject = PassthroughSubject<String, Never>()
 
 /////////////MVVM
+///
+///
+///
 class ViewController: UIViewController{
 private let tableView = UITableView()
 private let viewModel = DataListViewModel<Todo>()
