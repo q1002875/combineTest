@@ -9,95 +9,22 @@ import UIKit
 import Combine
 import Foundation
 
-
-//class ViewController: UIViewController {
-//    private let tableView = UITableView()
-//    private var cancellables = Set<AnyCancellable>()
-//    private var data = [Todo]()
-//
-//    override func viewDidLoad() {
-//        super.viewDidLoad()
-//
-//        // 設置表格
-//        tableView.frame = view.bounds
-//        tableView.dataSource = self
-//        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
-//        view.addSubview(tableView)
-//
-//
-//        // 串接API
-//        let url = URL(string: "https://jsonplaceholder.typicode.com/todos")!
-//
-//        fetchTodos(from: url) { result in
-//            switch result {
-//            case .success(let todos):
-//                self.data = todos
-//                self.tableView.reloadData()
-//                print("Fetched \(todos.count) todos")
-//            case .failure(let error):
-//                print("Error: \(error)")
-//            }
-//        }
-//
-//    }
-//
-//    func fetchTodos(from url: URL, completion: @escaping (Result<[Todo], Error>) -> Void) {
-//        URLSession.shared.dataTaskPublisher(for: url)
-//            .map(\.data)
-//            .decode(type: [Todo].self, decoder: JSONDecoder())
-//            .receive(on: DispatchQueue.main)
-//            .sink(receiveCompletion: { result in
-//                switch result {
-//                case .finished:
-//                    break
-//                case .failure(let error):
-//                    completion(.failure(error))
-//                }
-//            }, receiveValue: { todos in
-//                completion(.success(todos))
-//            })
-//            .store(in: &cancellables)
-//    }
-//
-//}
-//
-//extension ViewController: UITableViewDataSource {
-//    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-//        return data.count
-//    }
-//
-//    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-//        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-//        cell.textLabel?.text = "Title:\(data[indexPath.row].title)" + "ID:\(data[indexPath.row].id)"
-//
-//        return cell
-//    }
-//}
-//
-//struct Todo: Codable {
-//    let userId: Int
-//    let id: Int
-//    let title: String
-//    let completed: Bool
-//}
-
-
-
-
+let dataSubject = PassthroughSubject<String, Never>()
 
 /////////////MVVM
 
 
-class ViewController: UIViewController {
+class ViewController: UIViewController{
 private let tableView = UITableView()
-private let viewModel = TodoListViewModel()
-
+private let viewModel = DataListViewModel<Todo>()
+private var cancellable: AnyCancellable?
 override func viewDidLoad() {
     super.viewDidLoad()
     
-    // 設置表格
+    subjectData()
     tableView.frame = view.bounds
     tableView.dataSource = self
+    tableView.delegate = self
     tableView.register(MyTableViewCell.self, forCellReuseIdentifier: "Cell")
     view.addSubview(tableView)
     
@@ -105,7 +32,8 @@ override func viewDidLoad() {
     
     viewModel.$todos
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] _ in
+        .sink { [weak self] datas in
+            //sink返回值會有強循環 用weak解掉
             self?.tableView.reloadData()
         }
         .store(in: &viewModel.cancellables)
@@ -121,24 +49,41 @@ override func viewDidLoad() {
         }
         .store(in: &viewModel.cancellables)
     
-    // 獲取資料
-    viewModel.fetchTodos()
+    viewModel.fetchDatas()
 }
+    
+    func subjectData(){
+        cancellable = dataSubject
+            .receive(on: RunLoop.main)
+            .sink {[weak self] data in
+                self?.updateUI(data: data)
+            }
+    }
+    private func updateUI(data: String) {
+            // 更新UI
+        print(data)
+        }
 }
 
-extension ViewController: UITableViewDataSource {
+extension ViewController: UITableViewDataSource ,UITableViewDelegate{
 func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
     return viewModel.todos.count
 }
 
 func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
     let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-    cell.textLabel?.text = "Title:\(viewModel.todos[indexPath.row].title)" + "ID:\(viewModel.todos[indexPath.row].id)"
+//    cell.textLabel?.text = "name:\(viewModel.todos[indexPath.row].name)" + "Gender:\(viewModel.todos[indexPath.row].gender)"
+    
+    cell.textLabel?.text = "name:\(viewModel.todos[indexPath.row].title)" + "Gender:\(viewModel.todos[indexPath.row].userId)"
      
     return cell
 }
     
-
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        print("sss")
+        dataSubject.send("Hello World")
+        navigationController?.pushViewController(SecondViewController(), animated: true)
+    }
     
 }
 class MyTableViewCell: UITableViewCell {
@@ -158,3 +103,12 @@ class MyTableViewCell: UITableViewCell {
 //在此範例中，創建了一個 TodoListViewModel，該 ViewModel 負責處理從 API 獲取 Todo 對象列表的業務邏輯。在 ViewController 中，只需要在 ViewDidLoad 方法中創建一個實例，然後設置表格和訂閱 TodoListViewModel 的 $todos 和 $error 屬性即可。
 //
 //當 TodoListViewModel 中的 todos 屬性更改時，會通過 Combine 的 @Published 屬性發出通知，這將導致 ViewController 的表格
+class SecondViewController: UIViewController {
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.view.backgroundColor = .blue
+        // 發送一個事件到全域的 PublishSubject
+        dataSubject.send("Hello World")
+    }
+}

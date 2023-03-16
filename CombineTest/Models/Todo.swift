@@ -12,4 +12,11 @@ let userId: Int
 let id: Int
 let title: String
 let completed: Bool
+    
+//    let age: Int
+//    let name: String
+//    let gender: String
+
+
+    
 }
